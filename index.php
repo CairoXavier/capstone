@@ -16,7 +16,6 @@
     $gclient->setClientSecret($secret);
     $gclient->setRedirectUri('http://localhost/capstone/index.php');
     
-    
     $gclient->addScope('email');
     $gclient->addScope('profile');
     
@@ -42,7 +41,7 @@
     }
 ?>
 <style>
-    model-viewer{
+    model-viewer {
         width: 100%;
         height: 100%;
         margin: 0px;
@@ -81,10 +80,13 @@
         $result = $conn->query($sql);
         if ($result->num_rows > 0) {
             while($row = $result->fetch_assoc()) {
-                echo '<div class="col-md-4 mb-4 exhibit-box" data-toggle="modal" data-target="#exhibitModal" data-name="' . $row["name"] . '" data-description="' . $row["information"] . '" data-model="' . $row["model"] . '">';
+                // Define local .glb file URL for each exhibit
+                $modelURL = 'models/' . $row['exhibitName'] . '.glb';
+
+                echo '<div class="col-md-4 mb-4 exhibit-box" data-toggle="modal" data-target="#exhibitModal" data-exhibitName="' . $row["exhibitName"] . '" data-exhibitInformation="' . $row["exhibitInformation"] . '" data-exhibitModel="' . $row["exhibitModel"] . '" data-exhibitCode="' . $row["exhibitCode"] . '">';
                 echo '<div class="card">';
                 echo '<div class="card-body text-center">';
-                echo '<h5 class="card-title">' . $row["name"] . '</h5>';
+                echo '<h5 class="card-title">' . $row["exhibitName"] . '</h5>';
                 echo '</div>';
                 echo '</div>';
                 echo '</div>';
@@ -110,29 +112,27 @@
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-4">
-                        <model-viewer 
-                            src="https://yatsurej.github.io/3d-models/ship_in_a_bottle/scene.gltf" 
-                            ar 
-                            camera-controls 
-                            touch-action="pan-y">
-                        </model-viewer>
+                    <model-viewer 
+                    id="modal-3d-viewer"
+                    ar 
+                    camera-controls 
+                    touch-action="pan-y"
+                    ></model-viewer>
                     </div>
                     <div class="col-md-8 text-right">
                         <h2 id="modal-exhibit-name"></h2>
-                        <p id="modal-exhibit-description"></p>
-                        <div id="modal-3d-model"></div>
-                            <button class="btn btn-primary">View 3D Model</button>
-                            <button class="btn btn-secondary ml-2">Scan</button>
-                            <div class="form-group">
-                    <label for="rating">Rate this exhibit:</label>
-                    <select class="form-control" id="rating" name="rating">
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
-                    </select>
-                </div>
+                        <p id="modal-exhibit-information"></p>
+                        <button id="view-3d-model-btn" class="btn btn-primary">View 3D Model</button>
+                        <button id="scan-3d-model-btn" class="btn btn-secondary ml-2">Scan</button>
+                        <div class="form-group">
+                            <label for="rating">Rate this exhibit:</label>
+                            <select class="form-control" ID="rating" exhibitName="rating">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -140,13 +140,6 @@
         </div>
     </div>
 </div>
-
-<model-viewer 
-    src="https://yatsurej.github.io/3d-models/ship_in_a_bottle/scene.gltf" 
-    ar 
-    camera-controls 
-    touch-action="pan-y">
-</model-viewer>
 
 <!-- Bootstrap JS and dependencies -->
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -156,46 +149,89 @@
 <!-- JavaScript to handle modal content -->
 <script>
     $('.exhibit-box').click(function() {
-        var name = $(this).data('name');
-        var description = $(this).data('description');
-        var modelUrl = $(this).data('model');
+        var exhibitName = $(this).data('exhibitname');
+        var exhibitInformation = $(this).data('exhibitinformation');
+        var exhibitCode = $(this).data('exhibitcode');
+        var exhibitModel = $(this).data('exhibitmodel');
         var modal = $('#exhibitModal');
-        modal.find('#modal-exhibit-name').text(name);
-        modal.find('#modal-exhibit-description').text(description);
+        modal.find('#modal-exhibit-name').text(exhibitName);
+        modal.find('#modal-exhibit-information').text(exhibitInformation);
+        modal.find('#modal-3d-viewer').attr('src', 'models/' + exhibitName + '.glb');
+        modal.find('#modal-3d-viewer').attr('ios-src', 'models/' + exhibitName + '.usdz');
+
+
+        // Dynamically set the model URL for the viewer
+        var viewer = document.getElementById('modal-3d-viewer');
+        viewer.setAttribute('src', 'models/' + exhibitName + '.glb');
+    });
+</script>
+
+<script>
+    // Wait for the DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Get the "Scan 3D Model" button by its id
+    var scan3DModelButton = document.getElementById('scan-3d-model-btn');
+
+    // Add a click event listener to the button
+    scan3DModelButton.addEventListener('click', function() {
+        // Get the exhibitName from the currently selected exhibit
+        var exhibitName = $('#exhibitModal').find('#modal-exhibit-name').text();
+
+        // Log the exhibitName to the console for debugging
+        console.log('Exhibit Name:', exhibitName);
+
+        // Redirect to scan.php with the exhibitName as a query parameter
+        window.location.href = 'scan.php?exhibitName=' + encodeURIComponent(exhibitName);
+    });
+});
+
+</script>
+
+<script>
+    // Wait for the DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get the "View 3D Model" button by its id
+        var view3DModelButton = document.getElementById('view-3d-model-btn');
+
+        // Add a click event listener to the button
+        view3DModelButton.addEventListener('click', function() {
+            // Get the selected exhibitName from the modal
+            var exhibitName = $('#exhibitModal').find('#modal-exhibit-name').text();
+
+            // Redirect to modelviewer.php with the exhibitName parameter
+            window.location.href = 'modelviewer.php?exhibitName=' + encodeURIComponent(exhibitName);
         });
+    });
 </script>
 
 <script>
     $('.exhibit-box').click(function() {
-    var name = $(this).data('name');
-    var description = $(this).data('description');
-    var exhibitId = $(this).data('id');
-    var modal = $('#exhibitModal');
+        var exhibitName = $(this).data('exhibitname');
+        var exhibitInformation = $(this).data('exhibitinformation');
+        var exhibitCode = $(this).data('exhibitcode');
+        var modal = $('#exhibitModal');
 
-    modal.find('#modal-exhibit-name').text(name);
-    modal.find('#modal-exhibit-description').text(description);
+        modal.find('#modal-exhibit-name').text(exhibitName);
+        modal.find('#modal-exhibit-information').text(exhibitInformation);
 
-    // Star rating interaction
-    $('.star').click(function() {
-        var rating = $(this).data('rating');
-       
-        $('.star').removeClass('selected');
-        $(this).addClass('selected');
-        
-        // Send rating to the server using AJAX
-        $.ajax({
-            type: 'POST',
-            url: 'submit_rating.php', // PHP script to handle rating submission
-            data: { exhibitId: exhibitId, rating: rating },
-            success: function(response) {
-               
-                console.log('Rating submitted successfully!');
-            },
-            error: function(xhr, status, error) {
+        // Star rating interaction
+        $('.star').click(function() {
+            var rating = $(this).data('rating');
 
-                console.error('Error submitting rating: ' + error);
-            }
+            $('.star').removeClass('selected');
+            $(this).addClass('selected');
+
+            $.ajax({
+                type: 'POST',
+                url: 'submit_rating.php', // PHP script to handle rating submission
+                data: { exhibitCode: exhibitCode, rating: rating },
+                success: function(response) {
+                    console.log('Rating submitted successfully!');
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error submitting rating: ' + error);
+                }
+            });
         });
     });
-});
 </script>

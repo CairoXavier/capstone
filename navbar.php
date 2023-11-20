@@ -14,6 +14,6 @@
 
 <nav class="navbar navbar-expand-lg">
   <div class="container-fluid w-50">
-    <a class="navbar-brand text-white" href="index.php">Web-AR Index</a>
+    <a class="navbar-brand text-white" href="index.php">Web-AR</a>
   </div>
 </nav>
